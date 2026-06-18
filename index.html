@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dinner Decision App</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f5f5f0; color: #1a1a1a; padding: 1.5rem; }
+  h1 { font-size: 22px; font-weight: 500; margin-bottom: 0.25rem; }
+  .subtitle { font-size: 14px; color: #666; margin-bottom: 1.5rem; }
+  .filter-row { display: flex; gap: 6px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .filter-btn { padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid #ddd; background: white; color: #666; }
+  .filter-btn:hover { background: #f0f0f0; }
+  .filter-btn.active { background: #1a1a1a; color: white; border-color: transparent; }
+  .meal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .meal-card { background: white; border: 1px solid #e5e5e5; border-radius: 12px; padding: 12px 14px; cursor: pointer; transition: border-color 0.15s, background 0.15s; text-align: left; }
+  .meal-card:hover { border-color: #bbb; background: #fafafa; }
+  .meal-card.selected { border: 2px solid #3b82f6; background: #eff6ff; }
+  .meal-card.selected .meal-name { color: #1d4ed8; }
+  .meal-emoji { font-size: 26px; display: block; margin-bottom: 5px; }
+  .meal-name { font-size: 13px; font-weight: 500; color: #1a1a1a; display: block; line-height: 1.3; }
+  .meal-time { font-size: 11px; color: #888; margin-top: 3px; display: block; }
+  .nz-badge { display: inline-block; font-size: 10px; font-weight: 500; background: #dcfce7; color: #166534; border-radius: 4px; padding: 2px 6px; margin-top: 4px; }
+  .or-divider { text-align: center; font-size: 13px; color: #888; margin: 0.5rem 0 1rem; }
+  .action-row { display: flex; gap: 10px; margin-bottom: 1.5rem; }
+  .btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; border: 1px solid #ddd; background: white; color: #1a1a1a; font-weight: 500; }
+  .btn:hover { background: #f0f0f0; }
+  .btn-primary { background: #1a1a1a; color: white; border-color: transparent; flex: 1; }
+  .btn-primary:hover { background: #333; }
+  .result-card { background: white; border: 1px solid #e5e5e5; border-radius: 12px; padding: 1.25rem; display: none; }
+  .result-card.visible { display: block; }
+  .result-header { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; }
+  .result-emoji { font-size: 36px; }
+  .result-title { font-size: 20px; font-weight: 500; }
+  .result-meta { font-size: 13px; color: #666; margin-top: 3px; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 1rem; }
+  .tab { padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid #ddd; background: transparent; color: #666; }
+  .tab.active { background: #1a1a1a; color: white; border-color: transparent; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .ingredients-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px; }
+  .ingredients-list li { display: flex; align-items: center; gap: 8px; font-size: 14px; background: #f9f9f9; border-radius: 8px; padding: 7px 12px; }
+  .ingredients-list li i { color: #16a34a; font-size: 16px; flex-shrink: 0; }
+  .step { display: flex; gap: 14px; margin-bottom: 1rem; align-items: flex-start; }
+  .step-num { width: 28px; height: 28px; border-radius: 50%; background: #f0f0f0; border: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; color: #666; flex-shrink: 0; margin-top: 1px; }
+  .step-title { font-size: 13px; font-weight: 500; color: #666; margin-bottom: 3px; }
+  .step-text { font-size: 14px; color: #1a1a1a; line-height: 1.6; }
+  .divider { border: none; border-top: 1px solid #eee; margin: 1rem 0; }
+</style>
+</head>
+<body>
+
+<h1>🍽️ What's for Dinner?</h1>
+<p class="subtitle">Dinner for 6 — pick a meal or let us decide</p>
+
+<div class="filter-row">
+  <button class="filter-btn active" onclick="setFilter('all', this)">All meals</button>
+  <button class="filter-btn" onclick="setFilter('nz', this)">🥝 Kiwi favourites</button>
+  <button class="filter-btn" onclick="setFilter('quick', this)">⚡ Under 30 mins</button>
+</div>
+
+<div class="meal-grid" id="mealGrid"></div>
+
+<div class="or-divider">— or —</div>
+
+<div class="action-row">
+  <button class="btn btn-primary" onclick="surpriseMe()">🎲 Surprise me!</button>
+  <button class="btn" onclick="clearSelection()">↺ Clear</button>
+</div>
+
+<div class="result-card" id="resultCard">
+  <div class="result-header">
+    <span class="result-emoji" id="resultEmoji"></span>
+    <div>
+      <div class="result-title" id="resultTitle"></div>
+      <div class="result-meta" id="resultMeta"></div>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('ingredients', event)">🛒 Ingredients</button>
+    <button class="tab" onclick="switchTab('recipe', event)">📋 Recipe</button>
+  </div>
+  <div class="tab-content active" id="tab-ingredients">
+    <ul class="ingredients-list" id="ingredientsList"></ul>
+  </div>
+  <div class="tab-content" id="tab-recipe">
+    <div id="recipeSteps"></div>
+  </div>
+</div>
+
+<script>
+const meals = [
+  {
+    emoji:"🍝", name:"Spaghetti Bolognese", time:"45 mins", nz:false, quick:false,
+    ingredients:["750g beef mince","600g spaghetti","2 onions","3 garlic cloves","2x 400g crushed tomatoes","3 tbsp tomato paste","olive oil","salt & pepper","parmesan cheese","fresh basil"],
+    steps:[
+      {title:"Boil the pasta water", text:"Bring a large pot of salted water to the boil. Cook spaghetti per packet instructions, then drain."},
+      {title:"Fry onion & garlic", text:"Heat olive oil in a large pan. Dice onions and crush garlic, fry 3–4 mins until soft."},
+      {title:"Brown the mince", text:"Add the mince and cook, breaking it up, until browned — about 6–7 mins."},
+      {title:"Add tomatoes", text:"Stir in tomato paste for 1 min. Add crushed tomatoes, season well, and simmer 20 mins."},
+      {title:"Serve", text:"Toss spaghetti with sauce. Serve with parmesan and torn basil."}
+    ]
+  },
+  {
+    emoji:"🍗", name:"Roast Chicken", time:"1.5 hrs", nz:false, quick:false,
+    ingredients:["2 whole chickens","6 potatoes","4 carrots","1 lemon","1 garlic bulb","rosemary sprigs","olive oil","salt & pepper","butter"],
+    steps:[
+      {title:"Preheat oven", text:"Heat oven to 200°C. Pat chickens dry with paper towels."},
+      {title:"Season", text:"Rub butter all over skin. Season with salt and pepper. Stuff cavities with lemon, garlic, and rosemary."},
+      {title:"Prep vegetables", text:"Chop potatoes and carrots into large chunks. Toss with olive oil and seasoning in roasting trays."},
+      {title:"Roast", text:"Place chickens on top of vegetables. Roast 1 hr 20 mins, or until juices run clear."},
+      {title:"Rest and serve", text:"Rest 10 mins before carving. Serve with roasted veg and pan juices."}
+    ]
+  },
+  {
+    emoji:"🌮", name:"Beef Tacos", time:"30 mins", nz:false, quick:true,
+    ingredients:["750g beef mince","12 taco shells","2 onions","1 red capsicum","2 tins black beans","sour cream","shredded cheese","salsa","lettuce","taco seasoning"],
+    steps:[
+      {title:"Cook the mince", text:"Dice onion and capsicum. Fry 3 mins, add mince and cook until browned."},
+      {title:"Season", text:"Add taco seasoning and a splash of water. Simmer 5 mins."},
+      {title:"Warm the beans", text:"Drain and rinse beans, stir into mince and heat through."},
+      {title:"Warm shells", text:"Heat taco shells at 180°C for 5 mins."},
+      {title:"Assemble", text:"Fill shells with mince, top with lettuce, cheese, salsa, and sour cream."}
+    ]
+  },
+  {
+    emoji:"🍛", name:"Chicken Curry", time:"40 mins", nz:false, quick:false,
+    ingredients:["900g chicken breast","2x 400ml coconut cream","2 onions","3 garlic cloves","3 tbsp curry paste","3 cups basmati rice","fresh coriander","2 limes","vegetable oil"],
+    steps:[
+      {title:"Cook the rice", text:"Rinse rice and cook per packet instructions. Keep warm."},
+      {title:"Fry the base", text:"Dice onions and crush garlic. Fry in oil 3–4 mins until soft."},
+      {title:"Add curry paste", text:"Stir in curry paste and cook 1–2 mins until fragrant."},
+      {title:"Add chicken", text:"Chop chicken into bite-sized pieces. Add to pan and cook 5 mins."},
+      {title:"Simmer", text:"Pour in coconut cream. Simmer on low 20 mins until chicken is cooked through."},
+      {title:"Serve", text:"Squeeze lime over curry. Serve on rice with fresh coriander."}
+    ]
+  },
+  {
+    emoji:"🍔", name:"Burgers", time:"25 mins", nz:false, quick:true,
+    ingredients:["750g beef mince","6 burger buns","lettuce","2 tomatoes","6 cheese slices","red onion","pickles","ketchup","mustard","mayo"],
+    steps:[
+      {title:"Shape patties", text:"Divide mince into 6 patties slightly wider than the buns. Press a small indent in the centre of each."},
+      {title:"Cook patties", text:"Heat a pan or grill on high. Cook 3–4 mins per side. Add cheese in the last minute, cover to melt."},
+      {title:"Toast buns", text:"Toast buns cut-side down in the pan 1–2 mins until golden."},
+      {title:"Assemble", text:"Spread mayo and mustard on base. Layer lettuce, tomato, onion, patty, pickles, and ketchup. Cap and serve."}
+    ]
+  },
+  {
+    emoji:"🫕", name:"Vegetable Soup", time:"35 mins", nz:false, quick:false,
+    ingredients:["3 potatoes","3 carrots","2 zucchini","2 onions","3 celery stalks","1.5L vegetable stock","2 tins crushed tomatoes","3 garlic cloves","mixed herbs","salt & pepper"],
+    steps:[
+      {title:"Chop the veg", text:"Dice all vegetables into similar-sized pieces. Mince garlic."},
+      {title:"Fry the base", text:"Heat oil in a large pot. Fry onion and garlic 3–4 mins until soft."},
+      {title:"Add everything", text:"Add potatoes, carrots, celery, stock, crushed tomatoes, and herbs."},
+      {title:"Simmer", text:"Bring to boil then simmer 15 mins."},
+      {title:"Finish", text:"Add zucchini and simmer 5 more mins. Season and serve with crusty bread."}
+    ]
+  },
+  {
+    emoji:"🥩", name:"Kiwi BBQ Lamb Chops", time:"25 mins", nz:true, quick:true,
+    ingredients:["12 lamb loin chops","3 tbsp olive oil","3 garlic cloves","fresh rosemary","salt & pepper","6 potatoes (for mash)","butter & milk","1 bag frozen peas"],
+    steps:[
+      {title:"Marinate the chops", text:"Rub chops with olive oil, crushed garlic, chopped rosemary, salt, and pepper. Leave 10 mins."},
+      {title:"Make the mash", text:"Boil potatoes until tender, about 15 mins. Drain and mash with butter and milk. Season well."},
+      {title:"Cook the peas", text:"Cook frozen peas per packet instructions. Drain and keep warm."},
+      {title:"BBQ the chops", text:"Cook chops on a hot BBQ or grill pan 3–4 mins per side for medium. Rest 2 mins."},
+      {title:"Serve", text:"Plate chops alongside mash and peas. A classic Kiwi dinner!"}
+    ]
+  },
+  {
+    emoji:"🐟", name:"Fish & Chips", time:"40 mins", nz:true, quick:false,
+    ingredients:["6 pieces white fish (tarakihi or snapper)","6 large potatoes","1 cup flour","1 tsp baking powder","1 cup cold beer or sparkling water","salt & pepper","oil for frying","lemon wedges","tartare sauce"],
+    steps:[
+      {title:"Make the chips", text:"Cut potatoes into thick chips. Toss with oil and salt and bake at 220°C for 30–35 mins, turning halfway."},
+      {title:"Make the batter", text:"Mix flour, baking powder, and a pinch of salt. Whisk in cold beer or sparkling water until smooth."},
+      {title:"Heat the oil", text:"Heat a generous amount of oil in a deep pan to about 180°C."},
+      {title:"Fry the fish", text:"Pat fish dry, season, dip in batter. Fry 3–4 mins per side until golden and crispy. Drain on paper towels."},
+      {title:"Serve", text:"Serve fish and chips with lemon wedges, tartare sauce, and a sprinkle of salt."}
+    ]
+  },
+  {
+    emoji:"🥧", name:"Mince & Cheese Pie", time:"1 hr", nz:true, quick:false,
+    ingredients:["750g beef mince","2 onions","3 tbsp tomato sauce","2 tbsp Worcestershire sauce","2 tbsp flour","1 cup beef stock","6 slices tasty cheese","2 sheets shortcrust pastry","2 sheets puff pastry","1 egg (for egg wash)"],
+    steps:[
+      {title:"Make the filling", text:"Fry diced onion until soft. Add mince and brown well. Stir in flour, then add stock, tomato sauce, and Worcestershire. Simmer 10 mins until thick. Cool slightly."},
+      {title:"Preheat oven", text:"Heat oven to 200°C. Grease a large baking dish or pie tins."},
+      {title:"Line with pastry", text:"Press shortcrust pastry into the base and sides, trimming edges."},
+      {title:"Fill and top", text:"Spoon in mince filling. Lay cheese slices on top. Cover with puff pastry, pressing edges to seal. Cut a small steam hole."},
+      {title:"Bake", text:"Brush top with beaten egg. Bake 25–30 mins until golden and puffed."}
+    ]
+  },
+  {
+    emoji:"🍖", name:"Slow-cooked Lamb Shoulder", time:"4 hrs", nz:true, quick:false,
+    ingredients:["1.8kg bone-in lamb shoulder","1 head garlic","fresh rosemary","1 cup red wine","1 cup chicken stock","2 onions","3 carrots","olive oil","salt & pepper","mint sauce to serve"],
+    steps:[
+      {title:"Preheat and prep", text:"Heat oven to 160°C. Make small cuts all over the lamb and push in sliced garlic and rosemary."},
+      {title:"Sear the lamb", text:"Heat oil in a large oven-proof pot. Brown the lamb on all sides — about 8 mins. Remove and set aside."},
+      {title:"Build the base", text:"In the same pot, fry roughly chopped onion and carrots for 3 mins. Pour in wine and stock."},
+      {title:"Slow roast", text:"Return lamb to the pot. Cover tightly and roast 3.5–4 hours until meat falls off the bone."},
+      {title:"Serve", text:"Shred the lamb and serve with roasted vegetables, mint sauce, and mashed potato."}
+    ]
+  },
+  {
+    emoji:"🍜", name:"Hangi-style Chicken", time:"1.5 hrs", nz:true, quick:false,
+    ingredients:["1.5kg chicken pieces","6 kumara","6 potatoes","3 carrots","2 onions","butter","tinfoil","salt & pepper","mixed herbs"],
+    steps:[
+      {title:"Preheat oven", text:"Heat oven to 180°C."},
+      {title:"Prep the vegetables", text:"Peel and chop kumara, potatoes, and carrots into large chunks. Slice onions."},
+      {title:"Wrap in foil parcels", text:"Divide chicken and vegetables among large sheets of foil. Add butter, herbs, salt, and pepper to each. Seal tightly."},
+      {title:"Bake", text:"Place parcels on oven trays and bake 1 hour 15 mins until chicken is cooked through and veg is tender."},
+      {title:"Serve", text:"Carefully open parcels and serve straight from the foil — the steam and juices are all part of the flavour."}
+    ]
+  },
+  {
+    emoji:"🍜", name:"Stir-fry Noodles", time:"20 mins", nz:false, quick:true,
+    ingredients:["400g egg noodles","600g chicken breast","2 capsicums","3 heads bok choy","soy sauce","oyster sauce","sesame oil","3 garlic cloves","fresh ginger","spring onions"],
+    steps:[
+      {title:"Cook noodles", text:"Cook noodles per packet instructions. Drain and toss with sesame oil."},
+      {title:"Prep everything", text:"Slice chicken thinly. Slice capsicum. Halve bok choy. Mince garlic, grate ginger, mix soy and oyster sauce."},
+      {title:"Cook chicken", text:"Stir-fry chicken on high heat 5–6 mins until cooked. Remove and set aside."},
+      {title:"Stir-fry veg", text:"In the same pan, fry garlic and ginger 30 secs. Add capsicum and bok choy, stir-fry 3 mins."},
+      {title:"Combine and serve", text:"Return chicken, add noodles and sauce. Toss on high heat 2 mins. Top with spring onion."}
+    ]
+  }
+];
+
+let selectedIndex = null;
+let currentFilter = 'all';
+
+const grid = document.getElementById('mealGrid');
+
+function renderGrid() {
+  grid.innerHTML = '';
+  const filtered = meals.filter(m => {
+    if (currentFilter === 'nz') return m.nz;
+    if (currentFilter === 'quick') return m.quick;
+    return true;
+  });
+  filtered.forEach(meal => {
+    const i = meals.indexOf(meal);
+    const card = document.createElement('div');
+    card.className = 'meal-card' + (selectedIndex === i ? ' selected' : '');
+    card.id = 'card-' + i;
+    card.innerHTML = `<span class="meal-emoji">${meal.emoji}</span><span class="meal-name">${meal.name}</span><span class="meal-time">⏱ ${meal.time}</span>${meal.nz ? '<span class="nz-badge">🥝 Kiwi</span>' : ''}`;
+    card.onclick = () => selectMeal(i);
+    grid.appendChild(card);
+  });
+}
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+
+function selectMeal(i) {
+  if (selectedIndex !== null) {
+    const prev = document.getElementById('card-' + selectedIndex);
+    if (prev) prev.classList.remove('selected');
+  }
+  selectedIndex = i;
+  const cur = document.getElementById('card-' + i);
+  if (cur) cur.classList.add('selected');
+  showResult(i);
+}
+
+function showResult(i) {
+  const meal = meals[i];
+  document.getElementById('resultEmoji').textContent = meal.emoji;
+  document.getElementById('resultTitle').textContent = meal.name;
+  document.getElementById('resultMeta').textContent = meal.time + ' · serves 6' + (meal.nz ? ' · 🥝 Kiwi classic' : '');
+  document.getElementById('ingredientsList').innerHTML = meal.ingredients.map(ing =>
+    `<li><i class="ti ti-circle-check"></i>${ing}</li>`).join('');
+  document.getElementById('recipeSteps').innerHTML = meal.steps.map((s, n) =>
+    `<div class="step"><div class="step-num">${n+1}</div><div><div class="step-title">${s.title}</div><div class="step-text">${s.text}</div></div></div>`).join('');
+  const rc = document.getElementById('resultCard');
+  rc.classList.add('visible');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab')[0].classList.add('active');
+  document.getElementById('tab-ingredients').classList.add('active');
+  rc.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function switchTab(tab, event) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+function surpriseMe() {
+  const filtered = meals.filter(m => {
+    if (currentFilter === 'nz') return m.nz;
+    if (currentFilter === 'quick') return m.quick;
+    return true;
+  });
+  if (filtered.length === 0) return;
+  const meal = filtered[Math.floor(Math.random() * filtered.length)];
+  selectMeal(meals.indexOf(meal));
+}
+
+function clearSelection() {
+  if (selectedIndex !== null) {
+    const prev = document.getElementById('card-' + selectedIndex);
+    if (prev) prev.classList.remove('selected');
+    selectedIndex = null;
+  }
+  document.getElementById('resultCard').classList.remove('visible');
+}
+
+renderGrid();
+</script>
+</body>
+</html>
